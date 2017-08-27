@@ -1,0 +1,66 @@
+#Exercise Prediction  
+#By Shubham Mahajan  
+
+#Synopsis  
+In this report we will explore the different ways people did exercises. The data is taken from groupware. Using machine learning techniques we will train a model using the training data set to accurately find the different classe of excercise the people did using the testing data set.  
+
+##Getting and Splitting the Data  
+```{r}
+set.seed(100)
+library(caret)
+train <- read.csv("pml-training.csv")
+test <- read.csv("pml-testing.csv")
+
+inTrain <- createDataPartition(y=train$classe, p=0.7, list=F)
+train1 <- train[ inTrain, ]
+train2 <- train[-inTrain, ]
+```
+
+##Cleaning Data  
+```{r}
+
+#removing the variables with zero variance
+novariance <- nearZeroVar(train1)
+train1 <- train1[, -novariance]
+train2 <- train2[, -novariance]
+
+# remove the variables that are mostly have the NA value
+
+mostNA <- sapply(train1, function(x) mean(is.na(x))) > 0.95
+train1 <- train1[, mostNA==FALSE]
+train2 <- train2[, mostNA==FALSE]
+
+# remove any useless variables like name, the number of trial, etc. These are the first five variables
+
+train1 <- train1[, -(1:5)]
+train2 <- train2[, -(1:5)]
+
+```
+
+##Training the Model  
+```{r cache=TRUE}
+# I used random forest for modelling and k fold cross validation, in this   case k=3
+library(e1071)
+threeFoldCV <- trainControl(method="cv", number=3, verboseIter=F)
+fit <- train(classe ~ ., data=train1, method="rf", trControl=threeFoldCV)
+fit$finalModel
+```
+
+##Predicting on the Test Set in the Training Data  
+```{r cache=TRUE}
+preds <- predict(fit, newdata=train2)
+confusionMatrix(train2$classe, preds)
+```
+
+##Predicting on the Overall Test Set  
+```{r}
+# Since the model above worked well, we can use it on the test set
+predictions <- predict(fit, newdata=test)
+
+# show the results
+results <- data.frame(problem_id=test$problem_id,predicted=predictions)
+print(results)
+
+```
+
+
